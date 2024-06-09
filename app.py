@@ -4,6 +4,7 @@ from pymongo import MongoClient, errors as PyMongoError
 from dotenv import load_dotenv
 import os
 from flask_cors import CORS
+from datetime import datetime
 
 load_dotenv()
 app = Flask(__name__)
@@ -34,14 +35,38 @@ def subscribe():
         return jsonify({'error': 'Email and option are required'}), 400
     
     try:
-        # Save data to MongoDB
-        result = collection.insert_one({'email': email, 'option': option})
+        # Check if the email already exists in the database
+        existing_subscriber = collection.find_one({'email': email})
         
-        # Check if the data was inserted successfully
-        if result.inserted_id:
-            return jsonify({'message': 'Subscription successful', 'id': str(result.inserted_id)}), 201
+        if existing_subscriber:
+            if existing_subscriber['option'] == option:
+                return jsonify({'message': 'Subscription already exists'}), 200
+            else:
+                # Update the option and last_changed for the existing email
+                result = collection.update_one(
+                    {'email': email},
+                    {
+                        '$set': {'option': option, 'last_changed': datetime.utcnow()}
+                    }
+                )
+                
+                if result.modified_count > 0:
+                    return jsonify({'message': 'Subscription option updated'}), 200
+                else:
+                    return jsonify({'error': 'Failed to update subscription option'}), 500
         else:
-            return jsonify({'error': 'Failed to insert data'}), 500
+            result = collection.insert_one({
+                'email': email,
+                'option': option,
+                'created': datetime.utcnow(),
+                'last_changed': datetime.utcnow()
+            })
+            
+            if result.inserted_id:
+                return jsonify({'message': 'Subscription successful', 'id': str(result.inserted_id)}), 201
+            else:
+                return jsonify({'error': 'Failed to insert data'}), 500
+                
     except PyMongoError as e:
         return jsonify({'error': str(e)}), 500
 
