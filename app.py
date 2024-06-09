@@ -40,7 +40,7 @@ def subscribe():
         
         if existing_subscriber:
             if existing_subscriber['option'] == option:
-                return jsonify({'message': 'Subscription already exists'}), 200
+                return jsonify({'message': 'Already subscribed'}), 200
             else:
                 # Update the option and last_changed for the existing email
                 result = collection.update_one(
@@ -51,9 +51,9 @@ def subscribe():
                 )
                 
                 if result.modified_count > 0:
-                    return jsonify({'message': 'Subscription option updated'}), 200
+                    return jsonify({'message': 'Updated'}), 200
                 else:
-                    return jsonify({'error': 'Failed to update subscription option'}), 500
+                    return jsonify({'error': 'Failed to update subscription'}), 500
         else:
             result = collection.insert_one({
                 'email': email,
@@ -63,9 +63,9 @@ def subscribe():
             })
             
             if result.inserted_id:
-                return jsonify({'message': 'Subscription successful', 'id': str(result.inserted_id)}), 201
+                return jsonify({'message': 'Success', 'id': str(result.inserted_id)}), 201
             else:
-                return jsonify({'error': 'Failed to insert data'}), 500
+                return jsonify({'error': 'Failed'}), 500
                 
     except PyMongoError as e:
         return jsonify({'error': str(e)}), 500
